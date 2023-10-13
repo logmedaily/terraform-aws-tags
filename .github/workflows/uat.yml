@@ -6,7 +6,7 @@ on:
       - uat
 
 jobs:
-    development:
+    uat:
         runs-on: ubuntu-latest
     
         steps:
