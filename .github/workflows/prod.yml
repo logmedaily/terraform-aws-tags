@@ -6,7 +6,7 @@ on:
       - main
 
 jobs:
-    development:
+    production:
         runs-on: ubuntu-latest
     
         steps:
@@ -43,6 +43,12 @@ jobs:
                   --header "Authorization: Bearer ${{ secrets.PAT }}" \
                   "https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ steps.version.outputs.version }}")
                 echo "::set-output name=exists::$( echo "$RESPONSE" | jq -r '.message != "Not Found"' )"
+
+            - name: Deploy to GitHub Pages
+              uses: peaceiris/actions-gh-pages@v3
+              with:
+                github_token: '${{ secrets.PAT }}'
+                publish_dir: ./
         
             - name: Create Release
               if: steps.check_release.outputs.exists == 'false'
