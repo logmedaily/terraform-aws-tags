@@ -1,0 +1,56 @@
+name: DEVELOPMENT
+
+on:
+  push:
+    branches:
+      - prod
+
+jobs:
+    development:
+        runs-on: ubuntu-latest
+    
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v2
+        
+            - name: Setup Terraform
+              uses: hashicorp/setup-terraform@v1
+              with:
+                terraform_version: 1.5.7
+
+            - name: Terraform Initialize
+              run: terraform init
+            
+            - name: Terraform Validate
+              run: terraform validate
+            
+            - name: Terraform Plan
+              run: terraform plan
+              env:
+                AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+                AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        
+            - name: Read Version File
+              id: version
+              run: echo "::set-output name=version::$(cat VERSION)"
+        
+            - name: Check if release already exists
+              id: check_release
+              run: |
+                  RESPONSE=$(curl \
+                    --silent \
+                    --show-error \
+                    --header "Authorization: Bearer ${{ secrets.PAT }}" \
+                    "https://api.github.com/repos/${{ github.repository }}/releases/tags/v${{ steps.version.outputs.version }}")
+                  echo "::set-output name=exists::$(echo "$RESPONSE" | jq -r '.message != "Not Found")'
+        
+            - name: Create Release
+              if: steps.check_release.outputs.exists == 'false'
+              uses: actions/create-release@v1
+              env:
+                  GITHUB_TOKEN: '${{ secrets.PAT }}'
+              with:
+                  tag_name: 'v${{ steps.version.outputs.version }}'
+                  release_name: 'Release v${{ steps.version.outputs.version }}'
+                  draft: false
+                  prerelease: false
